@@ -18,30 +18,15 @@ export const enum RegistryType {
   RegQword = 'RegQword'
 }
 export interface RegistryItemValue {
-  name: string
-  value: Buffer
+  rawValue: Buffer
   vtype: RegistryType
 }
 export interface RegistryItem {
   exists: boolean
-  path: string
   keys: Array<string>
-  values: Array<RegistryItemValue>
+  values: Record<string, RegistryItemValue>
 }
-export interface RegisteryItemPutValue {
-  name: string
-  value: Buffer
-  vtype: RegistryType
-}
-export interface RegisteryItemPut {
-  path: string
-  values: Array<RegisteryItemPutValue>
-}
-export function list(path: string): Promise<RegistryItem>
-export function listAll(paths: Array<string>): Promise<Array<RegistryItem>>
-export function create(path: string): Promise<void>
-export function createAll(paths: Array<string>): Promise<void>
-export function put(registeryPut: RegisteryItemPut): Promise<void>
-export function putAll(registeryPuts: Array<RegisteryItemPut>): Promise<void>
-export function deleteKey(path: string): Promise<void>
-export function deleteAllKeys(paths: Array<string>): Promise<void>
+export function list(keys: Array<string>): Record<string, RegistryItem>
+export function create(keys: string | Array<string>): void
+export function put(putCollection: Record<string, Record<string, RegistryItemValue>>): void
+export function deleteKey(keys: string | Array<string>): void

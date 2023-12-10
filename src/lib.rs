@@ -1,5 +1,6 @@
-use std::io;
+use std::collections::HashMap;
 
+use napi::Either;
 use napi::Error;
 use napi::bindgen_prelude::Buffer;
 use winreg::HKEY;
@@ -28,41 +29,22 @@ pub enum RegistryType {
 
 #[napi(object)]
 pub struct RegistryItemValue {
-    pub name: String,
-    pub value: Buffer,
+    pub raw_value: Buffer,
     pub vtype: RegistryType,
 }
 
 #[napi(object)]
 pub struct RegistryItem {
     pub exists: bool,
-    pub path: String,
     pub keys: Vec<String>,
-    pub values: Vec<RegistryItemValue>,
-}
-
-#[napi(object)]
-pub struct RegisteryItemPutValue {
-    pub name: String,
-    pub value: Buffer,
-    pub vtype: RegistryType,
-}
-
-#[napi(object)]
-pub struct RegisteryItemPut {
-    pub path: String,
-    pub values: Vec<RegisteryItemPutValue>,
+    pub values: HashMap<String, RegistryItemValue>,
 }
 
 // List functions
+fn native_list(key: &str) -> Result<RegistryItem, Error> {
 
-#[napi]
-pub async fn list(path: String) -> Result<RegistryItem, Error> {
-    
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&path)?;
-
+    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
     let regkey = RegKey::predef(hkey);
-
     let result = regkey.open_subkey(path_wihout_hive);
 
     return match result {
@@ -71,46 +53,29 @@ pub async fn list(path: String) -> Result<RegistryItem, Error> {
 
             Ok(RegistryItem {
                 exists: true,
-                path: path,
-                keys: keys.map(|k| k.unwrap()).collect::<Vec<String>>(),
+                keys: keys.filter_map(|k| k.ok()).collect::<Vec<String>>(),
                 values: extract_regkey_values(key)
             })
         },
-        Err(err) => {
-            if err.kind() != io::ErrorKind::NotFound {
-                return Err(Error::from_reason(err.to_string()));
-            }
-
-            Ok(RegistryItem {
-                exists: false,
-                path: path,
-                keys: vec![],
-                values: vec![]
-            })
-        }
+        _ => Ok(RegistryItem { exists: false, keys: vec![], values: HashMap::new() })
     }
 }
 
 #[napi]
-pub async fn list_all(paths: Vec<String>) -> Vec<RegistryItem> {
-    let mut items: Vec<RegistryItem> = vec![];
+pub fn list(keys: Vec<String>) -> Result<HashMap<String, RegistryItem>, Error> {
+    let mut result: HashMap<String, RegistryItem> = HashMap::new();
 
-    for path in paths {
-        match list(path).await {
-            Ok(item) => items.push(item),
-            Err(_) => continue
-        }
+    for path in keys {
+        let res = native_list(&path)?;
+        result.insert(path, res);
     }
 
-    return items;
+    return Ok(result);
 }
 
 // Create functions
-
-#[napi]
-pub async fn create(path: String) -> Result<(), Error> {
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&path)?;
-
+fn native_create(key: String) -> Result<(), Error> {
+    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
     let regkey = RegKey::predef(hkey);
 
     return match regkey.create_subkey(path_wihout_hive) {
@@ -120,21 +85,24 @@ pub async fn create(path: String) -> Result<(), Error> {
 }
 
 #[napi]
-pub async fn create_all(paths: Vec<String>) -> Result<(), Error> {
+pub fn create(keys: Either<String, Vec<String>>) -> Result<(), Error> {
+
+    let paths: Vec<String> = match keys {
+        Either::A(path) => vec![path],
+        Either::B(paths) => paths
+    };
+
     for path in paths {
-        create(path).await?;
+        native_create(path)?;
     }
 
     return Ok(());
 }
 
 // Put functions
+fn native_put(key: &str, items: HashMap<String, RegistryItemValue>) -> Result<(), Error> {
 
-#[napi]
-pub async fn put(registery_put: RegisteryItemPut) -> Result<(), Error> {
-
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&registery_put.path)?;
-
+    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
     
     let (key, _) = match regkey.create_subkey(path_wihout_hive) {
@@ -142,8 +110,8 @@ pub async fn put(registery_put: RegisteryItemPut) -> Result<(), Error> {
         Err(err) => return Err(Error::from_reason(err.to_string()))
     };
 
-    for registery_put_value in registery_put.values {
-        let result = key.set_raw_value(registery_put_value.name, &RegValue { bytes: registery_put_value.value.to_vec(), vtype: registry_type_to_regtype(registery_put_value.vtype)});
+    for (name, item) in items {
+        let result = key.set_raw_value(name, &RegValue { bytes: item.raw_value.to_vec(), vtype: registry_type_to_regtype(item.vtype)});
 
         if result.is_err() {
             return Err(Error::from_reason(result.err().unwrap().to_string()));
@@ -155,20 +123,19 @@ pub async fn put(registery_put: RegisteryItemPut) -> Result<(), Error> {
 }
 
 #[napi]
-pub async fn put_all(registery_puts: Vec<RegisteryItemPut>) -> Result<(), Error> {
-    for registery_put in registery_puts {
-        put(registery_put).await?;
+pub fn put(put_collection: HashMap<String, HashMap<String, RegistryItemValue>>) -> Result<(), Error> {
+
+    for (key, items) in put_collection {
+        native_put(&key, items)?;
     }
 
     return Ok(());
 }
 
 // Delete functions
+fn native_delete_key(key: String) -> Result<(), Error> {
 
-#[napi]
-pub async fn delete_key(path: String) -> Result<(), Error> {
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&path)?;
-
+    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
     let regkey = RegKey::predef(hkey);
 
     return match regkey.delete_subkey_all(path_wihout_hive) {
@@ -178,10 +145,15 @@ pub async fn delete_key(path: String) -> Result<(), Error> {
 }
 
 #[napi]
-pub async fn delete_all_keys(paths: Vec<String>) -> Result<(), Error> {
+pub fn delete_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
+
+    let paths: Vec<String> = match keys {
+        Either::A(path) => vec![path],
+        Either::B(paths) => paths
+    };
 
     for path in paths {
-        delete_key(path).await?;
+        native_delete_key(path)?;
     }
 
     return Ok(());
@@ -189,7 +161,11 @@ pub async fn delete_all_keys(paths: Vec<String>) -> Result<(), Error> {
 
 fn get_hkey_from_path(path: &str) -> Result<(HKEY, String), Error> {
     let splited: Vec<&str> = path.split("\\").collect();
-    let str_hive = splited.get(0).unwrap();
+    
+    let str_hive = match splited.get(0) {
+        Some(str_hive) => str_hive,
+        None => return Err(Error::from_reason(format!("Unable to get hive from path: {}", path)))
+    };
 
     let hive: HKEY = match string_to_hkey(str_hive) {
         Ok(hive) => hive,
@@ -202,7 +178,8 @@ fn get_hkey_from_path(path: &str) -> Result<(HKEY, String), Error> {
 }
 
 fn string_to_hkey(hive: &str) -> Result<HKEY, String> {
-    return match hive {
+
+    return match hive.to_uppercase().as_str() {
         "HKEY_LOCAL_MACHINE" | "HKLM" => Ok(HKEY_LOCAL_MACHINE),
         "HKEY_CURRENT_USER" | "HKCU" => Ok(HKEY_CURRENT_USER),
         "HKEY_CLASSES_ROOT" | "HKCR" => Ok(HKEY_CLASSES_ROOT),
@@ -212,28 +189,24 @@ fn string_to_hkey(hive: &str) -> Result<HKEY, String> {
     }
 }
 
-fn extract_regkey_values(reg_key: RegKey) -> Vec<RegistryItemValue> {
-    let mut res_values: Vec<RegistryItemValue> = vec![];
+fn extract_regkey_values(reg_key: RegKey) -> HashMap<String, RegistryItemValue> {
+    let mut res_values: HashMap<String, RegistryItemValue> = HashMap::new();
     let values = reg_key.enum_values();
 
-    for value in values {
+    for value_result in values {
+        match value_result {
+            Ok(value) => {
+                let (name, data) = value;
 
-        if value.is_err() {
-            continue;
-        }
+                let value = RegistryItemValue { 
+                    raw_value: data.bytes.into(),
+                    vtype: regtype_to_registry_type(data.vtype)
+                };
 
-        let value = value.unwrap();
-        let name = value.0;
-        let data = value.1;
-
-        let value = RegistryItemValue { 
-            name: name,
-            value: data.bytes.into(),
-            vtype: regtype_to_registry_type(data.vtype)
+                res_values.insert(name, value);
+            },
+            Err(_) => continue
         };
-
-        res_values.push(value);
-
     }
 
     return res_values;

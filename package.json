@@ -7,8 +7,6 @@
         "regedit-rs",
         "regedit",
         "registry",
-        "node-regedit",
-        "windows-registry",
         "windows",
         "rust"
     ],

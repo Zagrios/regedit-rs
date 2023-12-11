@@ -2,85 +2,107 @@
 
 import { RegistryType } from "./js-binding"
 
-// Types here
+export abstract class RegistryItemValueMapper {
+    private static readonly registryTypeToClass: Record<RegistryType, typeof RegistryItemValue>;
 
-export class RegistryItemValue {
+    public static from(buffer: Buffer | string, type: RegistryType.RegSz): RegSzValue;
+    public static from(buffer: Buffer | string, type: RegistryType.RegExpandSz): RegExpandSzValue;
+    public static from(buffer: Buffer | number, type: RegistryType.RegDword): RegDwordValue;
+    public static from(buffer: Buffer | BigInt, type: RegistryType.RegQword): RegQwordValue;
+    public static from(buffer: Buffer | string[], type: RegistryType.RegMultiSz): RegMultiSzValue;
+    public static from(buffer: Buffer, type: RegistryType.RegBinary): RegBinaryValue;
+    public static from(buffer: Buffer, type: RegistryType.RegNone): RegNoneValue;
+    public static from(buffer: Buffer | string, type: RegistryType.RegLink): RegLinkValue;
+    public static from(buffer: Buffer, type: RegistryType.RegResourceList): RegResourceListValue;
+    public static from(buffer: Buffer, type: RegistryType.RegFullResourceDescriptor): RegFullResourceDescriptorValue;
+    public static from(buffer: Buffer, type: RegistryType.RegResourceRequirementsList): RegResourceRequirementsListValue;
+    public static from(buffer: Buffer | number, type: RegistryType.RegDwordBigEndian): RegDwordBigEndianValue;
+}
+
+export abstract class RegistryItemValue<ValueType = unknown, RegType = RegistryType> {
+    
+    public static valueToBuffer(value: unknown): Buffer;
+    public static bufferToValue(buffer: Buffer): unknown;
+
     readonly rawValue: Buffer;
-    readonly type: RegistryType;
-    constructor(rawValue: Buffer, type: RegistryType)
-    get value(): any;
+    readonly type: RegType;
+    constructor(value: Buffer|ValueType, type: RegistryType);
+    get value(): ValueType;
 }
 
-export class REG_SZ_Value extends RegistryItemValue {
-    constructor(value: string);
-    readonly type: RegistryType.RegSz;
-    get value(): string;
+export class RegSzValue extends RegistryItemValue<string, RegistryType.RegSz> {
+    public static valueToBuffer(value: string): Buffer;
+    public static bufferToValue(buffer: Buffer): string;
+    constructor(value: Buffer|string);
 }
 
-export class REG_EXPAND_SZ_Value extends RegistryItemValue {
-    constructor(value: string);
+export class RegExpandSzValue extends RegistryItemValue<string, RegistryType.RegExpandSz> {
+    public static valueToBuffer(value: string): Buffer;
+    public static bufferToValue(buffer: Buffer): string;
+    constructor(value: Buffer|string);
     readonly type: RegistryType.RegExpandSz;
-    get value(): string;
+    get expandedValue(): string;
 }
 
-export class REG_DWORD_Value extends RegistryItemValue {
-    constructor(value: number);
-    readonly type: RegistryType.RegDword;
-    get value(): number;
+export class RegDwordValue extends RegistryItemValue<number, RegistryType.RegDword> {
+    public static valueToBuffer(value: number): Buffer;
+    public static bufferToValue(buffer: Buffer): number;
+    constructor(value: Buffer|number);
 }
 
-export class REG_QWORD_Value extends RegistryItemValue {
-    constructor(value: number);
-    readonly type: RegistryType.RegQword;
-    get value(): number;
+export class RegQwordValue extends RegistryItemValue<BigInt, RegistryType.RegQword> {
+
+    public static valueToBuffer(value: BigInt): Buffer;
+    public static bufferToValue(buffer: Buffer): BigInt;
+    constructor(value: Buffer|BigInt);
 }
 
-export class REG_MULTI_SZ_Value extends RegistryItemValue {
-    constructor(value: string[]);
-    readonly type: RegistryType.RegMultiSz;
-    get value(): string[];
+export class RegMultiSzValue extends RegistryItemValue<string[], RegistryType.RegMultiSz> {
+    public static valueToBuffer(value: string[]): Buffer;
+    public static bufferToValue(buffer: Buffer): string[];
+    constructor(value: Buffer|string[]);
 }
 
-export class REG_BINARY_Value extends RegistryItemValue {
+export class RegBinaryValue extends RegistryItemValue<Buffer, RegistryType.RegBinary> {
+    public static valueToBuffer(value: Buffer): Buffer;
+    public static bufferToValue(buffer: Buffer): Buffer;
     constructor(value: Buffer);
-    readonly type: RegistryType.RegBinary;
-    get value(): Buffer;
 }
 
-export class REG_NONE_Value extends RegistryItemValue {
-    constructor();
-    readonly type: RegistryType.RegNone;
-    get value(): Buffer;
-}
-
-export class REG_LINK_Value extends RegistryItemValue {
-    constructor(value: string);
-    readonly type: RegistryType.RegLink;
-    get value(): string;
-}
-
-export class REG_DWORD_BIG_ENDIAN_Value extends RegistryItemValue {
-    constructor(value: number);
-    readonly type: RegistryType.RegDwordBigEndian;
-    get value(): number;
-}
-
-export class REG_RESOURCE_LIST_Value extends RegistryItemValue {
+export class RegNoneValue extends RegistryItemValue<Buffer, RegistryType.RegNone> {
+    public static valueToBuffer(value: Buffer): Buffer;
+    public static bufferToValue(buffer: Buffer): Buffer;
     constructor(value: Buffer);
-    readonly type: RegistryType.RegResourceList;
-    get value(): Buffer;
 }
 
-export class REG_FULL_RESOURCE_DESCRIPTOR_Value extends RegistryItemValue {
-    constructor(value: Buffer);
-    readonly type: RegistryType.RegFullResourceDescriptor;
-    get value(): Buffer;
+export class RegLinkValue extends RegistryItemValue<string, RegistryType.RegLink> {
+    public static valueToBuffer(value: string): Buffer;
+    public static bufferToValue(buffer: Buffer): string;
+    constructor(value: Buffer|string);
 }
 
-export class REG_RESOURCE_REQUIREMENTS_LIST_Value extends RegistryItemValue {
+export class RegResourceListValue extends RegistryItemValue<Buffer, RegistryType.RegResourceList> {
+    public static valueToBuffer(value: Buffer): Buffer;
+    public static bufferToValue(buffer: Buffer): Buffer;
     constructor(value: Buffer);
-    readonly type: RegistryType.RegResourceRequirementsList;
-    get value(): Buffer;
+}
+
+export class RegFullResourceDescriptorValue extends RegistryItemValue<Buffer, RegistryType.RegFullResourceDescriptor> {
+    public static valueToBuffer(value: Buffer): Buffer;
+    public static bufferToValue(buffer: Buffer): Buffer;
+    constructor(value: Buffer);
+}
+
+export class RegResourceRequirementsListValue extends RegistryItemValue<Buffer, RegistryType.RegResourceRequirementsList> {
+    public static valueToBuffer(value: Buffer): Buffer;
+    public static bufferToValue(buffer: Buffer): Buffer;
+    constructor(value: Buffer);
+}
+
+export class RegDwordBigEndianValue extends RegistryItemValue<number, RegistryType.RegDwordBigEndian> {
+    public static valueToBuffer(value: number): Buffer;
+    public static bufferToValue(buffer: Buffer): number;
+    constructor(value: Buffer|number);
 }
 
 export interface RegistryItem {
@@ -97,14 +119,12 @@ export type RegistryItemPutCollection = {
     [key: string]: RegistryPutItem;
 };
 
-export type RegistryItemCollection<T extends readonly string[], U = { [key in T[number]]: RegistryItem }> = U;
-
-export function listSync(keys: Array<string>): RegistryItemCollection<typeof keys>
+export function listSync<T extends string>(keys: Array<T>): Record<T, RegistryItem>
 export function createSync(keys: string | Array<string>): void
 export function putSync(putCollection: RegistryItemPutCollection): void
 export function deleteKeySync(keys: string | Array<string>): void
 
-export function list(keys: Array<string>): Promise<RegistryItemCollection<typeof keys>>
+export function list<T extends string>(keys: Array<T>): Promise<Record<T, RegistryItem>>
 export function create(keys: string | Array<string>): Promise<void>
 export function put(putCollection: RegistryItemPutCollection): Promise<void>
 export function deleteKey(keys: string | Array<string>): Promise<void>

@@ -1,3 +1,4 @@
+const path = require('path');
 const { RegistryType, list: _list, create: _create, put: _put, deleteKey: _deleteKey } = require('./js-binding');
 
 module.exports.RegistryType = RegistryType;
@@ -14,118 +15,254 @@ function szBufferToString(buffer) {
 }
 
 class RegistryItemValue {
-    constructor(rawValue, type) {
-        this.rawValue = rawValue;
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer, type) {
+        this.rawValue = Buffer.isBuffer(buffer) ? buffer : this.constructor.valueToBuffer(buffer);
         this.type = type;
     }
 
-    get value() {
-        switch (this.type) {
-            case RegistryType.RegSz || RegistryType.RegExpandSz || RegistryType.RegLink:
-                return szBufferToString(this.rawValue);
-            case RegistryType.RegMultiSz:
-                return szBufferToString(this.rawValue).split('\0');
-            case RegistryType.RegDword:
-                return this.rawValue.readInt32LE(0);
-            case RegistryType.RegQword:
-                return this.rawValue.readInt64LE(0);
-            case RegistryType.RegBinary || RegistryType.RegNone || RegistryType.RegResourceList || RegistryType.RegFullResourceDescriptor || RegistryType.RegResourceRequirementsList:
-                return this.rawValue;
-            case RegistryType.RegDwordBigEndian:
-                return this.rawValue.readInt32BE(0);
-            default:
-                return this.rawValue;
+    get value(){
+        return this.constructor.bufferToValue(this.rawValue);
+    }
+}
+class RegSzValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value, 'ucs-2');
+    }
+
+    static bufferToValue(buffer) {
+        return szBufferToString(buffer);
+    }
+
+    constructor(buffer) { 
+        super(buffer, RegistryType.RegSz);
+    }
+}
+
+class RegExpandSzValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value, 'ucs-2');
+    }
+
+    static bufferToValue(buffer) {
+        return szBufferToString(buffer);
+    }
+
+    constructor(buffer) { 
+        super(buffer, RegistryType.RegExpandSz);
+    }
+
+    get expandedValue() {
+        return this.value.replace(/%([^%]+)%/g, (_,n) => process.env[n]);
+    }
+}
+
+class RegDwordValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        const buffer = Buffer.alloc(4);
+        buffer.writeInt32LE(value, 0);
+        return buffer;
+    }
+
+    static bufferToValue(buffer) {
+        return buffer.readInt32LE(0);
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegDword);
+    }
+}
+
+class RegQwordValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        const buffer = Buffer.alloc(8);
+        buffer.writeBigInt64LE(value, 0);
+        return buffer;
+    }
+
+    static bufferToValue(buffer) {
+        return buffer.readBigInt64LE(0);
+    }
+
+    constructor(buffer) { 
+        super(buffer, RegistryType.RegQword);
+    }
+}
+
+class RegMultiSzValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value.join('\0'), 'ucs-2');
+    }
+
+    static bufferToValue(buffer) {
+        return szBufferToString(buffer).split('\0');
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegMultiSz);
+    }
+}
+
+class RegBinaryValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegBinary);
+    }
+}
+
+class RegNoneValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegNone);
+    }
+}
+
+class RegLinkValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value, 'ucs-2');
+    }
+
+    static bufferToValue(buffer) {
+        return szBufferToString(buffer);
+    }
+
+    constructor(buffer) { 
+        super(buffer, RegistryType.RegLink);
+    }
+}
+
+class RegResourceListValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer) { 
+        super(buffer, RegistryType.RegResourceList);
+    }
+}
+
+class RegFullResourceDescriptorValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegFullResourceDescriptor);
+    }
+}
+
+class RegResourceRequirementsListValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        return Buffer.from(value);
+    }
+
+    static bufferToValue(buffer) {
+        return buffer;
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegResourceRequirementsList);
+    }
+}
+class RegDwordBigEndianValue extends RegistryItemValue {
+
+    static valueToBuffer(value) {
+        const buffer = Buffer.alloc(4);
+        buffer.writeInt32BE(value, 0);
+        return buffer;
+    }
+
+    static bufferToValue(buffer) {
+        return buffer.readInt32BE(0);
+    }
+
+    constructor(buffer) {
+        super(buffer, RegistryType.RegDwordBigEndian);
+    }
+}
+
+class RegistryItemValueMapper {
+
+    static registryTypeToClass = {
+        [RegistryType.RegSz]: RegSzValue,
+        [RegistryType.RegExpandSz]: RegExpandSzValue,
+        [RegistryType.RegDword]: RegDwordValue,
+        [RegistryType.RegQword]: RegQwordValue,
+        [RegistryType.RegMultiSz]: RegMultiSzValue,
+        [RegistryType.RegBinary]: RegBinaryValue,
+        [RegistryType.RegNone]: RegNoneValue,
+        [RegistryType.RegLink]: RegLinkValue,
+        [RegistryType.RegResourceList]: RegResourceListValue,
+        [RegistryType.RegFullResourceDescriptor]: RegFullResourceDescriptorValue,
+        [RegistryType.RegResourceRequirementsList]: RegResourceRequirementsListValue,
+        [RegistryType.RegDwordBigEndian]: RegDwordBigEndianValue
+    };
+
+    static from(value, type) {
+        const registryValueClass = RegistryItemValueMapper.registryTypeToClass[type];
+        if(!registryValueClass){
+            throw new Error(`Unknown registry type ${type}`);
         }
+
+        return new registryValueClass(value);
     }
 }
 
 module.exports.RegistryItemValue = RegistryItemValue;
-
-module.exports.REG_SZ_Value = class REG_SZ_Value extends RegistryItemValue {
-    constructor(value) { 
-        const rawValue = Buffer.from(value, 'ucs-2');
-        super(rawValue, RegistryType.REG_SZ);
-    }
-}
-
-module.exports.REG_EXPAND_SZ_Value = class REG_EXPAND_SZ_Value extends RegistryItemValue {
-    constructor(value) { 
-        const rawValue = Buffer.from(value, 'ucs-2');
-        super(rawValue, RegistryType.REG_EXPAND_SZ);
-    }
-}
-
-module.exports.REG_DWORD_Value = class REG_DWORD_Value extends RegistryItemValue {
-    constructor(value) {
-        const rawValue = Buffer.alloc(4);
-        rawValue.writeInt32LE(value, 0);
-
-        super(rawValue, RegistryType.REG_DWORD);
-    }
-}
-
-module.exports.REG_QWORD_Value = class REG_QWORD_Value extends RegistryItemValue {
-    constructor(value) { 
-        const rawValue = Buffer.alloc(8);
-        rawValue.writeInt64LE(value, 0);
-
-        super(rawValue, RegistryType.REG_QWORD);
-    }
-}
-
-module.exports.REG_MULTI_SZ_Value = class REG_MULTI_SZ_Value extends RegistryItemValue {
-    constructor(value) { 
-        const rawValue = Buffer.from(value.join('\0'), 'ucs-2');
-        super(rawValue, RegistryType.REG_MULTI_SZ);
-    }
-}
-
-module.exports.REG_BINARY_Value = class REG_BINARY_Value extends RegistryItemValue {
-    constructor(value) {
-        super(value, RegistryType.REG_BINARY);
-    }
-}
-
-module.exports.REG_NONE_Value = class REG_NONE_Value extends RegistryItemValue {
-    constructor() {
-        const rawValue = Buffer.alloc(0);
-        super(rawValue, RegistryType.REG_NONE);
-    }
-}
-
-module.exports.REG_LINK_Value = class REG_LINK_Value extends RegistryItemValue {
-    constructor(value) { 
-        const rawValue = Buffer.from(value, 'ucs-2');
-        super(rawValue, RegistryType.REG_LINK);
-    }
-}
-
-module.exports.REG_RESOURCE_LIST_Value = class REG_RESOURCE_LIST_Value extends RegistryItemValue {
-    constructor(value) { 
-        super(value, RegistryType.REG_RESOURCE_LIST);
-    }
-}
-
-module.exports.REG_FULL_RESOURCE_DESCRIPTOR_Value = class REG_FULL_RESOURCE_DESCRIPTOR_Value extends RegistryItemValue {
-    constructor(value) {
-        super(value, RegistryType.REG_FULL_RESOURCE_DESCRIPTOR);
-    }
-}
-
-module.exports.REG_RESOURCE_REQUIREMENTS_LIST_Value = class REG_RESOURCE_REQUIREMENTS_LIST_Value extends RegistryItemValue {
-    constructor(value) {
-        super(value, RegistryType.REG_RESOURCE_REQUIREMENTS_LIST);
-    }
-}
-
-module.exports.REG_DWORD_BIG_ENDIAN_Value = class REG_DWORD_BIG_ENDIAN_Value extends RegistryItemValue {
-    constructor(value) {
-        const rawValue = Buffer.alloc(8);
-        rawValue.writeInt64LE(value, 0);
-
-        super(rawValue, RegistryType.REG_QWORD_LITTLE_ENDIAN);
-    }
-}
+module.exports.RegistryItemValueMapper = RegistryItemValueMapper;
+module.exports.RegSzValue = RegSzValue;
+module.exports.RegExpandSzValue = RegExpandSzValue;
+module.exports.RegDwordValue = RegDwordValue;
+module.exports.RegQwordValue = RegQwordValue;
+module.exports.RegMultiSzValue = RegMultiSzValue;
+module.exports.RegBinaryValue = RegBinaryValue;
+module.exports.RegNoneValue = RegNoneValue;
+module.exports.RegLinkValue = RegLinkValue;
+module.exports.RegResourceListValue = RegResourceListValue;
+module.exports.RegFullResourceDescriptorValue = RegFullResourceDescriptorValue;
+module.exports.RegResourceRequirementsListValue = RegResourceRequirementsListValue;
+module.exports.RegDwordBigEndianValue = RegDwordBigEndianValue;
 
 //#endregion
 
@@ -142,7 +279,7 @@ module.exports.listSync = function(keys){
 
         for(const value in registryItem.values){
             const registryValue = registryItem.values[value];
-            registryItem.values[value] = new RegistryItemValue(registryValue.rawValue, registryValue.vtype);
+            registryItem.values[value] = RegistryItemValueMapper.from(registryValue.rawValue, registryValue.vtype);
         }
     }
 

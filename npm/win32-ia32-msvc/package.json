@@ -11,6 +11,14 @@
   "files": [
     "regedit-rs.win32-ia32-msvc.node"
   ],
+  "keywords": [
+    "regedit-rs",
+    "regedit",
+    "registry",
+    "windows",
+    "rust",
+    "node regedit"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">= 10"

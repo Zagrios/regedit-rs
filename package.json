@@ -9,7 +9,8 @@
     "registry",
     "windows",
     "rust",
-    "node regedit"
+    "node regedit",
+    "node registry"
   ],
   "files": [
     "index.d.ts",

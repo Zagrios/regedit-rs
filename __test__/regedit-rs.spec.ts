@@ -179,8 +179,12 @@ test(`deleteKey delete ${key}\\${now} key`, async t => {
     await createKey(`${key}\\${now}`);
     await createKey(`${key}\\${now}-测试`);
     await deleteKey(`${key}\\${now}`);
+    
     const res = await list([key]);
+    const resSub = await list([`${key}\\${now}`]);
+
     t.false(res[key].keys.includes(now));
+    t.false(resSub[`${key}\\${now}`].exists);
     t.true(res[key].keys.includes(`${now}-测试`));
 });
 

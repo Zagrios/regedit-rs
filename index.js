@@ -1,4 +1,3 @@
-const path = require('path');
 const { RegistryType, list: _list, createKey: _createKey, putValue: _putValue, deleteKey: _deleteKey, deleteValue: _deleteValue } = require('./js-binding');
 
 module.exports.RegistryType = RegistryType;

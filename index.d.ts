@@ -2,6 +2,8 @@
 
 import { RegistryType } from "./js-binding"
 
+//#region RegistryItemValueMapper
+
 export abstract class RegistryItemValueMapper {
     private static readonly registryTypeToClass: Record<RegistryType, typeof RegistryItemValue>;
 
@@ -18,6 +20,10 @@ export abstract class RegistryItemValueMapper {
     public static from(buffer: Buffer, type: RegistryType.RegResourceRequirementsList): RegResourceRequirementsListValue;
     public static from(buffer: Buffer | number, type: RegistryType.RegDwordBigEndian): RegDwordBigEndianValue;
 }
+
+//#endregion
+
+//#region RegistryItemValue classes
 
 export abstract class RegistryItemValue<ValueType = unknown, RegType = RegistryType> {
     
@@ -104,6 +110,8 @@ export class RegDwordBigEndianValue extends RegistryItemValue<number, RegistryTy
     public static bufferToValue(buffer: Buffer): number;
     constructor(value: Buffer|number);
 }
+
+//#endregion
 
 export interface RegistryItem {
     exists: boolean

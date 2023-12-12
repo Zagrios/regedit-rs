@@ -46,6 +46,7 @@
             "ts"
         ],
         "timeout": "3m",
+        "concurrency": 1,
         "environmentVariables": {
             "TS_NODE_PROJECT": "./tsconfig.json"
         }

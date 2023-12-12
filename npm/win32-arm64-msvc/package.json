@@ -11,6 +11,7 @@
   "files": [
     "regedit-rs.win32-arm64-msvc.node"
   ],
+  "description": "A high-performance Windows registry toolkit, powered by Rust with napi-rs",
   "keywords": [
     "regedit-rs",
     "regedit",
@@ -22,5 +23,6 @@
   "license": "MIT",
   "engines": {
     "node": ">= 10"
-  }
+  },
+  "repository": "git@github.com:Zagrios/regedit-rs.git"
 }

@@ -64,5 +64,7 @@
     "universal": "napi universal",
     "version": "napi version"
   },
-  "packageManager": "yarn@4.0.2"
+  "packageManager": "yarn@4.0.2",
+  "repository": "git@github.com:Zagrios/regedit-rs.git",
+  "description": "A high-performance Windows registry toolkit, powered by Rust with napi-rs"
 }

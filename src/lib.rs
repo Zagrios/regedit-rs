@@ -62,10 +62,15 @@ fn native_list(key: &str) -> Result<RegistryItem, Error> {
 }
 
 #[napi]
-pub fn list(keys: Vec<String>) -> Result<HashMap<String, RegistryItem>, Error> {
+pub fn list(keys: Either<String, Vec<String>>) -> Result<HashMap<String, RegistryItem>, Error> {
     let mut result: HashMap<String, RegistryItem> = HashMap::new();
 
-    for path in keys {
+    let paths: Vec<String> = match keys {
+        Either::A(path) => vec![path],
+        Either::B(paths) => paths
+    };
+
+    for path in paths {
         let res = native_list(&path)?;
         result.insert(path, res);
     }
@@ -74,7 +79,7 @@ pub fn list(keys: Vec<String>) -> Result<HashMap<String, RegistryItem>, Error> {
 }
 
 // Create functions
-fn native_create(key: String) -> Result<(), Error> {
+fn native_create_key(key: String) -> Result<(), Error> {
     let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
     let regkey = RegKey::predef(hkey);
 
@@ -85,7 +90,7 @@ fn native_create(key: String) -> Result<(), Error> {
 }
 
 #[napi]
-pub fn create(keys: Either<String, Vec<String>>) -> Result<(), Error> {
+pub fn create_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
 
     let paths: Vec<String> = match keys {
         Either::A(path) => vec![path],
@@ -93,14 +98,14 @@ pub fn create(keys: Either<String, Vec<String>>) -> Result<(), Error> {
     };
 
     for path in paths {
-        native_create(path)?;
+        native_create_key(path)?;
     }
 
     return Ok(());
 }
 
 // Put functions
-fn native_put(key: &str, items: HashMap<String, RegistryItemValue>) -> Result<(), Error> {
+fn native_put_value(key: &str, items: HashMap<String, RegistryItemValue>) -> Result<(), Error> {
 
     let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
@@ -123,10 +128,10 @@ fn native_put(key: &str, items: HashMap<String, RegistryItemValue>) -> Result<()
 }
 
 #[napi]
-pub fn put(put_collection: HashMap<String, HashMap<String, RegistryItemValue>>) -> Result<(), Error> {
+pub fn put_value(put_collection: HashMap<String, HashMap<String, RegistryItemValue>>) -> Result<(), Error> {
 
     for (key, items) in put_collection {
-        native_put(&key, items)?;
+        native_put_value(&key, items)?;
     }
 
     return Ok(());
@@ -154,6 +159,37 @@ pub fn delete_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
 
     for path in paths {
         native_delete_key(path)?;
+    }
+
+    return Ok(());
+}
+
+fn native_delete_value(key: String, values: Vec<String>) -> Result<(), Error> {
+
+    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
+    let regkey = RegKey::predef(hkey);
+    
+    let (key, _) = match regkey.create_subkey(path_wihout_hive) {
+        Ok(res) => res,
+        Err(err) => return Err(Error::from_reason(err.to_string()))
+    };
+
+    for value in values {
+        let result = key.delete_value(value);
+
+        if result.is_err() {
+            return Err(Error::from_reason(result.err().unwrap().to_string()));
+        }
+    }
+
+    return Ok(());
+}
+
+#[napi]
+pub fn delete_value(delete_collection: HashMap<String, Vec<String>>) -> Result<(), Error> {
+
+    for (key, values) in delete_collection {
+        native_delete_value(key, values)?;
     }
 
     return Ok(());

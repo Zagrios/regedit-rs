@@ -252,10 +252,11 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { RegistryType, list, create, put, deleteKey } = nativeBinding
+const { RegistryType, list, createKey, putValue, deleteKey, deleteValue } = nativeBinding
 
 module.exports.RegistryType = RegistryType
 module.exports.list = list
-module.exports.create = create
-module.exports.put = put
+module.exports.createKey = createKey
+module.exports.putValue = putValue
 module.exports.deleteKey = deleteKey
+module.exports.deleteValue = deleteValue

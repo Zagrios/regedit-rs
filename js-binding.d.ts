@@ -26,7 +26,8 @@ export interface RegistryItem {
   keys: Array<string>
   values: Record<string, RegistryItemValue>
 }
-export function list(keys: Array<string>): Record<string, RegistryItem>
-export function create(keys: string | Array<string>): void
-export function put(putCollection: Record<string, Record<string, RegistryItemValue>>): void
+export function list(keys: string | Array<string>): Record<string, RegistryItem>
+export function createKey(keys: string | Array<string>): void
+export function putValue(putCollection: Record<string, Record<string, RegistryItemValue>>): void
 export function deleteKey(keys: string | Array<string>): void
+export function deleteValue(deleteCollection: Record<string, Array<string>>): void

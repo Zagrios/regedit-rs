@@ -111,22 +111,20 @@ export interface RegistryItem {
     values: Record<string, RegistryItemValue>
 }
 
-export interface RegistryPutItem {
-    [name: string]: RegistryItemValue;
-}
+export type RegistryPutItemValues = Record<string, RegistryItemValue>;
+export type RegistryPutCollection = Record<string, RegistryPutItemValues>;
+export type RegistyDeleteCollection = Record<string, Array<string>>;
 
-export type RegistryItemPutCollection = {
-    [key: string]: RegistryPutItem;
-};
-
-export function listSync<T extends string>(keys: Array<T>): Record<T, RegistryItem>
-export function createSync(keys: string | Array<string>): void
-export function putSync(putCollection: RegistryItemPutCollection): void
+export function listSync<T extends string>(keys: Array<T>|T): Record<T, RegistryItem>
+export function createKeySync(keys: string | Array<string>): void
+export function putValueSync(putCollection: RegistryPutCollection): void
 export function deleteKeySync(keys: string | Array<string>): void
+export function deleteValueSync(deleteCollection: RegistyDeleteCollection): void
 
-export function list<T extends string>(keys: Array<T>): Promise<Record<T, RegistryItem>>
-export function create(keys: string | Array<string>): Promise<void>
-export function put(putCollection: RegistryItemPutCollection): Promise<void>
+export function list<T extends string>(keys: Array<T>|T): Promise<Record<T, RegistryItem>>
+export function createKey(keys: string | Array<string>): Promise<void>
+export function putValue(putCollection: RegistryPutCollection): Promise<void>
 export function deleteKey(keys: string | Array<string>): Promise<void>
+export function deleteValue(deleteCollection: RegistyDeleteCollection): Promise<void>
 
 export { RegistryType } from "./js-binding.d"

@@ -1,5 +1,5 @@
 const path = require('path');
-const { RegistryType, list: _list, create: _create, put: _put, deleteKey: _deleteKey } = require('./js-binding');
+const { RegistryType, list: _list, createKey: _createKey, putValue: _putValue, deleteKey: _deleteKey, deleteValue: _deleteValue } = require('./js-binding');
 
 module.exports.RegistryType = RegistryType;
 
@@ -286,16 +286,37 @@ module.exports.listSync = function(keys){
     return res;
 }
 
-module.exports.createSync = function(keys){
-
+module.exports.createKeySync = function(keys){
+    return _createKey(keys);
 }
 
-module.exports.putSync = function(putCollection){
+module.exports.putValueSync = function(putCollection){
+    // Value send to Rust must follow this format: 
+    // { [key: string]: { [name: string]: { rawValue: Buffer, vtype: RegistryType } }  }
 
+    const parsedCollection = {};
+
+    for(const key in putCollection){
+        const registryItem = putCollection[key];
+        for(const value in registryItem){
+            const registryValue = registryItem[value];
+            parsedCollection[key] = parsedCollection[key] || {};
+            parsedCollection[key][value] = {
+                rawValue: registryValue.rawValue,
+                vtype: registryValue.type
+            };
+        }
+    }
+
+    return _putValue(parsedCollection);
 }
 
 module.exports.deleteKeySync = function(keys){
+    return _deleteKey(keys);
+}
 
+module.exports.deleteValueSync = function(deleteCollection){
+    return _deleteValue(deleteCollection);
 }
 
 
@@ -311,10 +332,10 @@ module.exports.list = async function(keys){
     });
 }
 
-module.exports.create = async function(keys){
+module.exports.createKey = async function(keys){
     return new Promise((resolve, reject) => {
         try {
-            const res = _create(keys);
+            const res = module.exports.createKeySync(keys);
             resolve(res);
         }
         catch (err) {
@@ -323,10 +344,10 @@ module.exports.create = async function(keys){
     });
 }
 
-module.exports.put = async function(putCollection){
+module.exports.putValue = async function(putCollection){
     return new Promise((resolve, reject) => {
         try {
-            const res = _put(putCollection);
+            const res = module.exports.putValueSync(putCollection);
             resolve(res);
         }
         catch (err) {
@@ -338,7 +359,19 @@ module.exports.put = async function(putCollection){
 module.exports.deleteKey = async function(keys){
     return new Promise((resolve, reject) => {
         try {
-            const res = _deleteKey(keys);
+            const res = module.exports.deleteKeySync(keys);
+            resolve(res);
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
+module.exports.deleteValue = async function(deleteCollection){
+    return new Promise((resolve, reject) => {
+        try {
+            const res = module.exports.deleteValueSync(deleteCollection);
             resolve(res);
         }
         catch (err) {

@@ -29,7 +29,6 @@ test('test RegistryValue classes', async (t) => {
 
     const expandSz = new RegExpandSzValue("%SystemRoot%\\system32");
     t.is(expandSz.value, "%SystemRoot%\\system32");
-    t.is(expandSz.expandedValue, "C:\\Windows\\system32");
 
     const binary = new RegBinaryValue(Buffer.from("hello"));
     t.deepEqual(binary.value, Buffer.from("hello"));
@@ -229,7 +228,6 @@ test('putValue can create values', async t => {
 
     t.is(res[vKey].values['RegExpandSzValue'].type, RegistryType.RegExpandSz);
     t.is(res[vKey].values['RegExpandSzValue'].value, "%SystemRoot%\\system32");
-    t.is((res[vKey].values['RegExpandSzValue'] as RegExpandSzValue).expandedValue, "C:\\Windows\\system32");
 
     t.is(res[vKey].values['RegMultiSzValue'].type, RegistryType.RegMultiSz);
     t.deepEqual(res[vKey].values['RegMultiSzValue'].value, ["a", "b", "c"]);

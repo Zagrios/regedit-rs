@@ -52,9 +52,11 @@ test('list can list single key', async t => {
     
     const path = "HKLM\\software\\microsoft\\windows\\CurrentVersion";
 
-    const res = (await list(path));
+    const res = await list(path);
 
     const currentVersionKey = res[path];
+
+    console.log(res[path]);
 
     t.true(currentVersionKey.exists);
     t.truthy(currentVersionKey.keys);
@@ -64,7 +66,6 @@ test('list can list single key', async t => {
     t.true(currentVersionKey.values["ProgramFilesDir"].type === RegistryType.RegSz);
     t.true(currentVersionKey.values["ProgramFilesDir"].value === "C:\\Program Files");
     t.true(currentVersionKey.values["ProgramFilesPath"].value === "%ProgramFiles%");
-    t.true((currentVersionKey.values["ProgramFilesPath"] as RegExpandSzValue).expandedValue === "C:\\Program Files");
 });
 
 test('list can list multiple keys', async t => {

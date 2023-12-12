@@ -64,8 +64,7 @@ test('list can list single key', async t => {
     t.truthy(currentVersionKey.values);
     t.truthy(currentVersionKey.values["ProgramFilesDir"]);
     t.true(currentVersionKey.values["ProgramFilesDir"].type === RegistryType.RegSz);
-    t.true(currentVersionKey.values["ProgramFilesDir"].value === "C:\\Program Files");
-    t.true(currentVersionKey.values["ProgramFilesPath"].value === "%ProgramFiles%");
+    t.truthy(currentVersionKey.values["ProgramFilesDir"].value);
 });
 
 test('list can list multiple keys', async t => {

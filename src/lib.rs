@@ -79,8 +79,8 @@ pub fn list(keys: Either<String, Vec<String>>) -> Result<HashMap<String, Registr
 }
 
 // Create functions
-fn native_create_key(key: String) -> Result<(), Error> {
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
+fn native_create_key(key: &str) -> Result<(), Error> {
+    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
 
     return match regkey.create_subkey(path_wihout_hive) {
@@ -98,7 +98,7 @@ pub fn create_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
     };
 
     for path in paths {
-        native_create_key(path)?;
+        native_create_key(&path)?;
     }
 
     return Ok(());
@@ -138,9 +138,9 @@ pub fn put_value(put_collection: HashMap<String, HashMap<String, RegistryItemVal
 }
 
 // Delete functions
-fn native_delete_key(key: String) -> Result<(), Error> {
+fn native_delete_key(key: &str) -> Result<(), Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
+    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
 
     return match regkey.delete_subkey_all(path_wihout_hive) {
@@ -158,15 +158,15 @@ pub fn delete_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
     };
 
     for path in paths {
-        native_delete_key(path)?;
+        native_delete_key(&path)?;
     }
 
     return Ok(());
 }
 
-fn native_delete_value(key: String, values: Vec<String>) -> Result<(), Error> {
+fn native_delete_value(key: &str, values: Vec<String>) -> Result<(), Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
+    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
     
     let (key, _) = match regkey.create_subkey(path_wihout_hive) {
@@ -189,7 +189,7 @@ fn native_delete_value(key: String, values: Vec<String>) -> Result<(), Error> {
 pub fn delete_value(delete_collection: HashMap<String, Vec<String>>) -> Result<(), Error> {
 
     for (key, values) in delete_collection {
-        native_delete_value(key, values)?;
+        native_delete_value(&key, values)?;
     }
 
     return Ok(());

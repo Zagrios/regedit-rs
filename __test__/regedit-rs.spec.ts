@@ -1,9 +1,16 @@
 import test from 'ava'
 import { list, RegistryType, createKey, putValue, RegSzValue, RegMultiSzValue, RegDwordValue, RegQwordValue, RegDwordBigEndianValue, RegNoneValue, RegLinkValue, RegExpandSzValue, RegBinaryValue, RegResourceListValue, RegFullResourceDescriptorValue, RegResourceRequirementsListValue, deleteKey, RegistryPutItemValues, deleteValue } from '../index'
 
+const IS_WINDOWS = process.platform === 'win32';
+
 //#region test classes
 
 test('test RegistryValue classes', async (t) => {
+
+    if(!IS_WINDOWS) {
+        return t.pass();
+    }
+
     t.timeout(5000);
 
     const regSz = new RegSzValue("hello");
@@ -48,15 +55,18 @@ test('test RegistryValue classes', async (t) => {
 //#region test list
 
 test('list can list single key', async t => {
+    
     t.timeout(5000);
     
     const path = "HKLM\\software\\microsoft\\windows\\CurrentVersion";
 
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(path));
+    }
+
     const res = await list(path);
 
     const currentVersionKey = res[path];
-
-    console.log(res[path]);
 
     t.true(currentVersionKey.exists);
     t.truthy(currentVersionKey.keys);
@@ -70,6 +80,10 @@ test('list can list single key', async t => {
 test('list can list multiple keys', async t => {
     t.timeout(5000);
 
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["HKLM\\software\\microsoft\\windows\\CurrentVersion", "HKLM\\software\\microsoft\\windows\\CurrentVersion\\policies"]));
+    }
+
     const res = await list(["HKLM\\software\\microsoft\\windows\\CurrentVersion", "HKLM\\software\\microsoft\\windows\\CurrentVersion\\policies"]);
 
     t.true(res["HKLM\\software\\microsoft\\windows\\CurrentVersion"].exists);
@@ -78,6 +92,10 @@ test('list can list multiple keys', async t => {
 
 test('list can be applied to several independant keys at once', async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["hklm", "hkcu"]));
+    }
 
     const res = await list(["hklm", "hkcu"]);
 
@@ -93,6 +111,10 @@ test('list can be applied to several independant keys at once', async t => {
 test('list can handle spaces in registry keys', async t => {
     t.timeout(5000);
 
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["HKCU\\Keyboard Layout"]));
+    }
+
     const res = await list(["HKCU\\Keyboard Layout"]);
 
     t.truthy(res["HKCU\\Keyboard Layout"]);
@@ -105,6 +127,10 @@ test('list can handle spaces in registry keys', async t => {
 test('list will fail for unknown hives', async t => {
     t.timeout(5000);
 
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["blah\\software"]));
+    }
+
     const res = await list(["blah\\software"]).catch(() => false);
 
     t.false(res);
@@ -112,6 +138,10 @@ test('list will fail for unknown hives', async t => {
 
 test('list lists default values', async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["HKCR\\Directory\\shell\\cmd\\command"]));
+    }
 
     const res = await list(["HKCR\\Directory\\shell\\cmd\\command"]);
 
@@ -123,6 +153,10 @@ test('list lists default values', async t => {
 
 test('list says if a key does not exist', async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(list(["HKCU\\not_exist"]));
+    }
 
     const res = await list(["HKCU\\not_exist"]);
 
@@ -139,11 +173,21 @@ const key = `${regeditRsKey}\\test`;
 
 test('createKey throw an error if it dont has permission', async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey("HKLM\\SECURITY\\unauthorized"));
+    }
+
     await t.throwsAsync(createKey("HKLM\\SECURITY\\unauthorized"));
 });
 
 test(`createKey create ${key}\\${now} key`, async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(`${key}\\${now}`));
+    }
+
     await createKey(`${key}\\${now}`);
     const res = await list([key]);
     t.true(res[key].keys.includes(now));
@@ -151,6 +195,11 @@ test(`createKey create ${key}\\${now} key`, async t => {
 
 test(`createKey create ${key}\\${now}-测试 key`, async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(`${key}\\${now}-测试`));
+    }
+
     await createKey(`${key}\\${now}-测试`);
     const res = await list([key]);
     t.true(res[key].keys.includes(`${now}-测试`));
@@ -158,6 +207,11 @@ test(`createKey create ${key}\\${now}-测试 key`, async t => {
 
 test(`createKey create multiple keys`, async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey([`${key}\\${now}-1`, `${key}\\${now}-2`]));
+    }
+
     await createKey([`${key}\\${now}-1`, `${key}\\${now}-2`]);
     const res = await list([key]);
     t.true(res[key].keys.includes(`${now}-1`));
@@ -170,11 +224,21 @@ test(`createKey create multiple keys`, async t => {
 
 test('deleteKey throw an error if it dont has permission', async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(deleteKey("HKLM\\SECURITY"));
+    }
+
     await t.throwsAsync(deleteKey("HKLM\\SECURITY"));
 })
 
 test(`deleteKey delete ${key}\\${now} key`, async t => {
     t.timeout(5000);
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(deleteKey(`${key}\\${now}`));
+    }
+
     await createKey(`${key}\\${now}`);
     await createKey(`${key}\\${now}-测试`);
     await deleteKey(`${key}\\${now}`);
@@ -206,6 +270,11 @@ test('putValue can create values', async t => {
     t.timeout(5000);
 
     const vKey = `${key}\\${now}-values`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -240,6 +309,11 @@ test('putValue can update values', async t => {
     t.timeout(5000);
 
     const vKey = `${key}\\${now}-values-update`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -260,6 +334,11 @@ test('putValue can change value type', async t => {
     t.timeout(5000);
 
     const vKey = `${key}\\${now}-values-type-change`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -284,6 +363,11 @@ test('deleteValue can delete values', async t => {
     t.timeout(5000);
 
     const vKey = `${key}\\${now}-values-delete`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -303,6 +387,11 @@ test('deleteValue can delete multiple values', async t => {
     t.timeout(5000);
 
     const vKey = `${key}\\${now}-values-delete-multiple`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -323,6 +412,11 @@ test('deleteValue can delete default value', async t => {
     t.timeout(5000);
     
     const vKey = `${key}\\${now}-values-delete-default`;
+
+    if(!IS_WINDOWS) {
+        return await t.throwsAsync(createKey(vKey));
+    }
+
     await t.notThrowsAsync(createKey(vKey));
     await t.notThrowsAsync(putValue({[vKey]: regValues}));
 
@@ -339,10 +433,6 @@ test('deleteValue can delete default value', async t => {
 });
 
 //#endregion
-
-test.after.always('clean up', async () => {
-    await deleteKey(regeditRsKey).catch(() => {});
-});
 
 
 

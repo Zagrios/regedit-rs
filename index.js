@@ -1,4 +1,23 @@
-const { RegistryType, list: _list, createKey: _createKey, putValue: _putValue, deleteKey: _deleteKey, deleteValue: _deleteValue } = require('./js-binding');
+function loadNativeBinding() {
+    try {
+        const binding = require('./js-binding');
+        return binding;
+    } catch (error) {
+
+        const registeryType = {};
+
+        return {
+            RegistryType: registeryType,
+            list: () => { throw error },
+            createKey: () => { throw error },
+            putValue: () => { throw error },
+            deleteKey: () => { throw error },
+            deleteValue: () => { throw error }
+        }
+    }
+}
+
+const { RegistryType, list: _list, createKey: _createKey, putValue: _putValue, deleteKey: _deleteKey, deleteValue: _deleteValue } = loadNativeBinding();
 
 module.exports.RegistryType = RegistryType;
 

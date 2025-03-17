@@ -31,7 +31,7 @@ jobs:
           - host: windows-latest
             build: |
               yarn build --target i686-pc-windows-msvc
-              yarn test
+              npm test
             target: i686-pc-windows-msvc
           - host: windows-latest
             target: aarch64-pc-windows-msvc
@@ -95,7 +95,7 @@ jobs:
         if: ${{ !matrix.settings.docker }}
         shell: bash
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: ${{ env.APP_NAME }}.*.node
@@ -124,7 +124,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: .
@@ -132,7 +132,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: yarn test
+        run: npm test
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -148,7 +148,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Move artifacts

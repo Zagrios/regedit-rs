@@ -43,9 +43,9 @@ pub struct RegistryItem {
 // List functions
 fn native_list(key: &str) -> Result<RegistryItem, Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(&key)?;
+    let (hkey, path_without_hive) = get_hkey_from_path(&key)?;
     let regkey = RegKey::predef(hkey);
-    let result = regkey.open_subkey(path_wihout_hive);
+    let result = regkey.open_subkey(path_without_hive);
 
     return match result {
         Ok(key) => {
@@ -80,10 +80,10 @@ pub fn list(keys: Either<String, Vec<String>>) -> Result<HashMap<String, Registr
 
 // Create functions
 fn native_create_key(key: &str) -> Result<(), Error> {
-    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
+    let (hkey, path_without_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
 
-    return match regkey.create_subkey(path_wihout_hive) {
+    return match regkey.create_subkey(path_without_hive) {
         Ok(_) => Ok(()),
         Err(err) => Err(Error::from_reason(err.to_string()))
     };
@@ -107,20 +107,16 @@ pub fn create_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
 // Put functions
 fn native_put_value(key: &str, items: HashMap<String, RegistryItemValue>) -> Result<(), Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
+    let (hkey, path_without_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
     
-    let (key, _) = match regkey.create_subkey(path_wihout_hive) {
+    let (key, _) = match regkey.create_subkey(path_without_hive) {
         Ok(res) => res,
         Err(err) => return Err(Error::from_reason(err.to_string()))
     };
 
     for (name, item) in items {
-        let result = key.set_raw_value(name, &RegValue { bytes: item.raw_value.to_vec(), vtype: registry_type_to_regtype(item.vtype)});
-
-        if result.is_err() {
-            return Err(Error::from_reason(result.err().unwrap().to_string()));
-        }
+        key.set_raw_value(name, &RegValue { bytes: item.raw_value.to_vec(), vtype: registry_type_to_regtype(item.vtype)}).map_err(|e| Error::from_reason(e.to_string()))?;
     }
 
     return Ok(());
@@ -140,10 +136,10 @@ pub fn put_value(put_collection: HashMap<String, HashMap<String, RegistryItemVal
 // Delete functions
 fn native_delete_key(key: &str) -> Result<(), Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
+    let (hkey, path_without_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
 
-    return match regkey.delete_subkey_all(path_wihout_hive) {
+    return match regkey.delete_subkey_all(path_without_hive) {
         Ok(_) => Ok(()),
         Err(err) => Err(Error::from_reason(err.to_string()))
     };
@@ -166,20 +162,16 @@ pub fn delete_key(keys: Either<String, Vec<String>>) -> Result<(), Error> {
 
 fn native_delete_value(key: &str, values: Vec<String>) -> Result<(), Error> {
 
-    let (hkey, path_wihout_hive) = get_hkey_from_path(key)?;
+    let (hkey, path_without_hive) = get_hkey_from_path(key)?;
     let regkey = RegKey::predef(hkey);
     
-    let (key, _) = match regkey.create_subkey(path_wihout_hive) {
+    let (key, _) = match regkey.create_subkey(path_without_hive) {
         Ok(res) => res,
         Err(err) => return Err(Error::from_reason(err.to_string()))
     };
 
     for value in values {
-        let result = key.delete_value(value);
-
-        if result.is_err() {
-            return Err(Error::from_reason(result.err().unwrap().to_string()));
-        }
+        key.delete_value(value).map_err(|e| Error::from_reason(e.to_string()))?;
     }
 
     return Ok(());
@@ -196,9 +188,9 @@ pub fn delete_value(delete_collection: HashMap<String, Vec<String>>) -> Result<(
 }
 
 fn get_hkey_from_path(path: &str) -> Result<(HKEY, String), Error> {
-    let splited: Vec<&str> = path.split("\\").collect();
+    let split: Vec<&str> = path.split('\\').collect();
     
-    let str_hive = match splited.get(0) {
+    let str_hive = match split.first() {
         Some(str_hive) => str_hive,
         None => return Err(Error::from_reason(format!("Unable to get hive from path: {}", path)))
     };
@@ -208,9 +200,9 @@ fn get_hkey_from_path(path: &str) -> Result<(HKEY, String), Error> {
         Err(err) => return Err(Error::from_reason(err))
     };
 
-    let path_wihout_hive: String = splited[1..].join("\\");
+    let path_without_hive: String = split[1..].join("\\");
 
-    return Ok((hive, path_wihout_hive));
+    return Ok((hive, path_without_hive));
 }
 
 fn string_to_hkey(hive: &str) -> Result<HKEY, String> {
